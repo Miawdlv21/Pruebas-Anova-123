@@ -1,0 +1,100 @@
+---
+title: "Conglomerados"
+author: "Mia Wayar" 
+date: "2025-12-04"
+output: 
+  github_document: default
+  html_document: default
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_format = "all") })
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r librerias, message=FALSE, warning=FALSE}
+library(ggplot2)
+library(dplyr)
+library(SDaA)  
+data(coots)
+```
+
+
+```{r}
+# Resumen básico
+summary(coots)
+
+# Cálculo de estadísticas por nidada (Cluster) para el gráfico
+resumen_nidadas <- coots %>%
+  group_by(clutch) %>%
+  summarise(
+    media_nidada = mean(volume),
+    n_huevos = n()
+  )
+
+# Gráfica A: Puntos individuales y medias por nidada
+ggplot(coots, aes(x = as.factor(clutch), y = volume)) +
+  geom_point(alpha = 0.5, size = 1.5) + # Huevos individuales
+  geom_point(data = resumen_nidadas, aes(y = media_nidada), 
+             color = "red", shape = 18, size = 3) + # Media de la nidada
+  labs(
+    title = "Volumen de huevos por Nidada (Conglomerados)",
+    subtitle = "Puntos negros: Huevos individuales | Diamantes rojos: Media de la nidada",
+    x = "Número de nidada (Identificador del Conglomerado)",
+    y = "Volumen del huevo"
+  ) +
+  theme_minimal() +
+  theme(axis.text.x = element_blank(), panel.grid.major.x = element_blank())
+```
+
+
+```{r}
+# Cálculo de totales por nidada
+datos_conglomerados <- coots %>%
+  group_by(clutch) %>%
+  summarise(
+    yi = sum(volume), # Suma del volumen en la nidada i
+    mi = n()          # Número de huevos medidos en la nidada i
+  )
+
+# Totales globales
+sum_yi <- sum(datos_conglomerados$yi) # Suma total de volumen en la muestra
+sum_mi <- sum(datos_conglomerados$mi) # Total de huevos en la muestra
+
+# Estimación Puntual (Media)
+mu_hat <- sum_yi / sum_mi
+
+cat("El promedio poblacional estimado del volumen del huevo es:", round(mu_hat, 4))
+```
+
+```{r}
+# 1. Definir variables
+n <- nrow(datos_conglomerados)      # Número de nidadas (clusters)
+m_bar <- mean(datos_conglomerados$mi) # Promedio de huevos por nidada
+
+# 2. Calcular los residuos al cuadrado (variabilidad entre clusters)
+# Fórmula interna: (Total_Cluster - (Media_Global * Tamaño_Cluster))^2
+datos_conglomerados <- datos_conglomerados %>%
+  mutate(
+    residuos_sq = (yi - mu_hat * mi)^2
+  )
+
+suma_residuos <- sum(datos_conglomerados$residuos_sq)
+
+# 3. Calcular la Varianza del estimador
+var_estimador <- (1 / (n * (n - 1) * m_bar^2)) * suma_residuos
+
+# 4. Calcular el Error Estándar (Raíz cuadrada de la varianza)
+se_estimador <- sqrt(var_estimador)
+
+# Mostrar resultados
+cat("Resultados Finales:\n")
+cat("Número de nidadas (n):", n, "\n")
+cat("Estimación media del volumen:", round(mu_hat, 4), "\n")
+cat("Error Estándar (SE):", round(se_estimador, 4), "\n")
+cat("Intervalo de Confianza (95% approx): [", 
+    round(mu_hat - 1.96*se_estimador, 3), ", ", 
+    round(mu_hat + 1.96*se_estimador, 3), "]\n")
+```
+
+

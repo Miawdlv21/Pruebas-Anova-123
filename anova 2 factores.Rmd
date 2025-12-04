@@ -1,0 +1,73 @@
+---
+title: "Anova 2 factores"
+author: "Mia Wayar"
+date: "2025-12-03"
+output: 
+  github_document: default
+  html_document: default
+knit: (function(inputFile, encoding) {
+  rmarkdown::render(inputFile, encoding = encoding, output_format = "all") })
+editor_options: 
+  markdown: 
+    wrap: 72
+---
+
+```{r}
+knitr::opts_chunk$set(echo = TRUE)
+library(knitr)
+library(ggplot2)
+```
+
+```{r}
+# Creación del DataFrame con los datos de la imagen
+# Factor 1: Nivel de Uso (Bloques)
+# Factor 2: Compañía (Tratamientos)
+# Variable Respuesta: Costo
+
+datos <- data.frame(
+  Costo = c(27, 24, 31, 23,    
+            68, 76, 65, 67,    
+            308, 326, 312, 300),
+  
+  Nivel_Uso = factor(c(rep("Bajo", 4), rep("Medio", 4), rep("Alto", 4)),
+                     levels = c("Bajo", "Medio", "Alto")),
+  
+  Compania = factor(rep(c("A", "B", "C", "D"), 3))
+)
+
+# Visualización de la tabla de datos
+kable(datos, caption = "Datos de Costos Mensuales por Compañía y Nivel de Uso")
+```
+```{r}
+ggplot(datos, aes(x=Compania, y=Costo, fill=Compania)) +
+  geom_boxplot() +
+  theme_minimal() +
+  labs(title = "Distribución de Costos por Compañía",
+       y = "Costo Mensual ($)",
+       x = "Compañía")
+```
+```{r}
+modelo_anova <- aov(Costo ~ Nivel_Uso + Compania, data = datos)
+
+# tabla ANOVA
+tabla_anova <- summary(modelo_anova)
+tabla_anova
+```
+
+```{r}
+# Extraemos el p-valor de la compañía
+p_valor_compania <- summary(modelo_anova)[[1]]["Compania", "Pr(>F)"]
+
+cat("**Resultado del Análisis:**\n\n")
+
+cat(paste("El valor P para las Compañías es:", format(p_valor_compania, scientific = FALSE), "\n\n"))
+
+if(p_valor_compania < 0.05){
+  cat("Dado que el valor P es **menor** que 0.05, **rechazamos la hipótesis nula**. \n\n")
+  cat("**Conclusión:** Con un 95% de confianza, existe evidencia estadística suficiente para afirmar que **SÍ existen diferencias significativas** en los costos promedio cobrados por las diferentes compañías de telefonía.")
+} else {
+  cat("Dado que el valor P es **mayor** que 0.05, **no rechazamos la hipótesis nula**. \n\n")
+  cat("**Conclusión:** Con un 95% de confianza, **NO existe evidencia estadística suficiente** para afirmar que las compañías cobren costos promedios diferentes. Las diferencias observadas pueden deberse al azar.")
+}
+```
+
